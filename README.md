@@ -11,9 +11,9 @@ Auth Center is a NestJS service that gives your apps one place to handle:
 
 If you are building multiple apps or microservices and want one shared identity + authorization layer, this project is the control plane.
 
-## Why this repo matters
+## Why Auth Center
 
-Most teams start with auth inside each app, then end up duplicating:
+Many teams start with auth inside each app, then end up duplicating:
 - user login flows
 - JWT signing and validation
 - roles and permissions
@@ -709,17 +709,16 @@ These details are important when integrating:
 - password reset currently publishes an event placeholder rather than completing a full reset-token lifecycle
 - service registration and authorization endpoints are documented with bearer auth in Swagger, but they are not guarded in the current controller implementation
 
-## Good fit for this project
+## Best fit
 
-Auth Center is a strong fit when you have:
+Auth Center works well when you have:
 - multiple apps that should trust the same identity system
 - multiple APIs that need consistent authorization rules
 - a roadmap from simple auth toward richer access control
 - internal platforms, SaaS products, B2B admin tools, or microservice ecosystems
 
-## Next evolution ideas
+## Roadmap ideas
 
-A great next phase for this repo would be:
 - admin CRUD for roles, permissions, policies, ACL, relationships, and orgs
 - service API keys or mTLS for machine-to-machine auth
 - email verification tokens and password reset completion flow
@@ -729,4 +728,4 @@ A great next phase for this repo would be:
 
 ## License
 
-Add your preferred license before open-sourcing or wider internal distribution.
+MIT
