@@ -1,0 +1,600 @@
+Build a production‑grade centralized Authentication and Authorization microservice using NestJS.
+
+This service must act as a standalone Identity and Authorization platform used by multiple independent applications (microservices such as chat, blog, trello clone, AI SaaS).
+
+The system must allow each connected application to choose which authorization models it wants to use.
+
+Supported authorization models:
+
+RBAC (Role Based Access Control)
+ABAC (Attribute Based Access Control)
+PBAC (Policy Based Access Control)
+ACL (Access Control List)
+ReBAC (Relationship Based Access Control)
+Each application must be able to enable or disable these models individually.
+
+Example:
+
+Application A → RBAC + ABAC
+
+Application B → RBAC only
+
+Application C → PBAC + ReBAC
+
+
+The authorization engine must dynamically evaluate only the enabled models for that application.
+
+--------------------------------------------------------
+--------------------------------------------------------
+SYSTEM REQUIREMENTS
+
+Framework:
+
+NestJS (latest stable version)
+TypeScript
+TypeORM (NOT Prisma)
+PostgreSQL
+Redis for caching and session storage
+RabbitMQ for event messaging
+JWT with RS256 asymmetric signing
+Argon2 password hashing
+Documentation:
+
+Swagger (OpenAPI) using @nestjs/swagger
+The system must be modular and extensible so that new authorization models can be added later.
+
+db drop and migration 
+dockerize application with compose running also need run the auth service localy for development with npm run dev
+the redis, postgres, rabbitMQ for development run by the compose and the nest just run with npm run dev 
+should define new ports for these cause the default are used by the system 
+
+env and env.example should be implement for configuration 
+--------------------------------------------------------
+--------------------------------------------------------
+
+ARCHITECTURE
+
+The service must contain the following modules:
+
+identity
+
+login
+register
+refresh tokens
+password reset
+email verification
+session management
+optional MFA
+accounts
+
+users
+organizations
+tenants
+memberships
+services
+
+service/application registration
+service configuration
+enable/disable authorization models per service
+authorization
+
+RBAC module
+ABAC module
+PBAC module
+ACL module
+ReBAC module
+policy-engine
+
+central authorization evaluation engine
+dynamic rule execution
+guards
+
+NestJS Guards that external services can reuse
+events
+
+RabbitMQ publishers and consumers
+cache
+
+Redis caching layer
+shared
+
+common utilities
+decorators
+DTOs
+interfaces
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+SERVICE REGISTRATION
+
+Each application must register itself.
+
+Endpoint:
+
+POST /services/register
+
+Example request:
+
+{
+
+“name”: “trello-service”,
+
+“enabledModels”: [“RBAC”, “ABAC”],
+
+“resources”: [
+
+“board”,
+
+“card”
+
+],
+
+“actions”: [
+
+“create”,
+
+“read”,
+
+“update”,
+
+“delete”
+
+]
+
+}
+
+Store configuration in database so authorization engine knows which models to evaluate.
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+AUTHORIZATION ENGINE
+
+Create a central service:
+
+AuthorizationEngineService
+
+Method:
+
+evaluateAccess(request)
+
+Request format:
+
+{
+
+userId: string
+
+service: string
+
+resource: string
+
+action: string
+
+resourceId?: string
+
+context?: object
+
+}
+
+Before evaluating permissions, the engine must load the service configuration and determine which models are enabled.
+
+Evaluation pipeline example:
+
+if service uses:
+
+RBAC + ABAC
+
+then run:
+
+RBAC check
+
+ABAC check
+
+If any rule grants access → ALLOW
+
+Otherwise → DENY
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+
+RBAC IMPLEMENTATION
+
+Tables:
+
+roles
+
+permissions
+
+role_permissions
+
+user_roles
+
+Permission format:
+
+service.resource.action
+
+Example:
+
+blog.post.create
+
+chat.message.delete
+
+trello.board.update
+
+Implement RBAC guard example.
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+ABAC IMPLEMENTATION
+
+Allow dynamic attributes:
+
+user attributes
+
+resource attributes
+
+environment attributes
+
+Tables:
+
+user_attributes
+
+resource_attributes
+
+Rules example:
+
+user.id == resource.ownerId
+
+user.plan == “pro”
+
+Rules must be evaluated dynamically using a safe expression evaluator.
+
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+PBAC IMPLEMENTATION
+
+Policies stored in database.
+
+Table:
+
+policies
+
+Fields:
+
+id
+
+service
+
+resource
+
+action
+
+effect
+
+condition
+
+priority
+
+Condition example:
+
+user.role == “editor” && resource.status != “locked”
+
+Policies should be cached in Redis.
+--------------------------------------------------------
+--------------------------------------------------------
+ACL IMPLEMENTATION
+
+Allow resource specific permissions.
+
+Table:
+
+acl_entries
+
+Fields:
+
+resource_type
+
+resource_id
+
+user_id
+
+permission
+
+Example:
+
+document:123 → user:45 → read
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+ReBAC IMPLEMENTATION
+
+Relationship based permissions.
+
+Table:
+
+relationships
+
+Example rows:
+
+user:1 member_of org:5
+
+org:5 owns repo:8
+
+Authorization engine must be able to evaluate relationship graphs.
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+JWT DESIGN
+
+Use RS256 asymmetric signing.
+
+JWT payload example:
+
+{
+
+“sub”: “user_id”,
+
+“email”: “user@email.com”,
+
+“roles”: [“admin”],
+
+“org”: “org123”
+
+}
+
+Other services must verify tokens using the public key.
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+REDIS USAGE
+
+Use Redis for:
+
+session storage
+token blacklist
+policy cache
+permission cache
+rate limiting
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+RABBITMQ EVENTS
+
+Emit events for system changes:
+
+user.created
+
+user.updated
+
+role.updated
+
+policy.updated
+
+permission.changed
+
+service.registered
+
+Other services can subscribe to these events.
+
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+NESTJS GUARDS
+
+Implement reusable guards:
+
+JwtAuthGuard
+
+RolesGuard
+
+PermissionGuard
+
+PolicyGuard
+
+Provide decorator examples:
+
+@RequirePermission(“blog.post.delete”)
+
+@RequireRole(“admin”)
+
+Guards must call AuthorizationEngineService.
+
+Provide example integration code showing how another NestJS service would use the guards.
+
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+API ENDPOINTS
+
+Auth:
+
+POST /auth/register
+
+POST /auth/login
+
+POST /auth/refresh
+
+POST /auth/logout
+
+Service management:
+
+POST /services/register
+
+GET /services
+
+Authorization:
+
+POST /authorize
+
+Example request:
+
+{
+
+“userId”: “123”,
+
+“service”: “blog”,
+
+“resource”: “post”,
+
+“action”: “delete”,
+
+“resourceId”: “99”
+
+}
+
+Response:
+
+{
+
+“allowed”: true
+
+}
+
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+DATABASE ENTITIES (TYPEORM)
+
+users
+
+organizations
+
+memberships
+
+roles
+
+permissions
+
+role_permissions
+
+user_roles
+
+services
+
+service_permissions
+
+policies
+
+relationships
+
+acl_entries
+
+user_attributes
+
+resource_attributes
+
+sessions
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+SWAGGER DOCUMENTATION
+
+Use @nestjs/swagger to document all endpoints.
+
+Include:
+
+DTO schemas
+request examples
+response examples
+authentication descriptions
+authorization endpoint documentation
+Swagger must be accessible at:
+
+/docs
+
+PROJECT STRUCTURE
+
+src
+
+modules
+
+identity
+
+accounts
+
+services
+
+authorization
+
+rbac
+
+abac
+
+pbac
+
+acl
+
+rebac
+
+policy-engine
+
+guards
+
+events
+
+cache
+
+common
+
+config
+
+database
+
+main.ts
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+SECURITY BEST PRACTICES
+
+Use:
+
+argon2id for password hashing
+
+refresh token rotation
+
+rate limiting
+
+audit logs
+
+secure cookie options
+
+token expiration
+
+IP login tracking
+
+--------------------------------------------------------
+--------------------------------------------------------
+
+OUTPUT REQUIREMENTS
+
+Generate:
+
+complete NestJS project structure
+TypeORM entities
+DTOs
+modules
+services
+guards
+decorators
+authorization engine implementation
+Redis integration
+RabbitMQ integration
+Swagger configuration
+example service integration --- make it complete how should implement to other services 
+The result must be a reusable authentication and authorization boilerplate platform suitable for large scale SaaS systems.
+
+

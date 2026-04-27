@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth-center-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth_center
+      POSTGRES_PASSWORD: auth_center
+      POSTGRES_DB: auth_center
+    ports:
+      - '55432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth-center-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - '56379:6379'
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: auth-center-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: auth_center
+      RABBITMQ_DEFAULT_PASS: auth_center
+    ports:
+      - '55672:5672'
+      - '55673:15672'
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

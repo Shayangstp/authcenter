@@ -1,0 +1,9 @@
+node_modules
+.env
+/dist
+coverage
+npm-debug.log*
+COMPLETE_SOLUTION.md
+IMPLEMENTATION_COMPLETE.md
+prompts.txt
+SETUP.md
